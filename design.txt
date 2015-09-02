@@ -1,0 +1,64 @@
+perfen design doc
+
+* Features
+
+** Backing track mode
+- Follow along with a live track by comparing the audio of a key
+  track to the audio of a live track
+- Dynamically stretch recorded audio to match location in the key
+  track
+- Turn on and off effects on incoming audio
+- Turn on and off sample triggers
+
+** Loop mode (phase 2)
+- Detect tempo of live track in real-time
+- Allow looping of input audio
+- Dynamically stretch looped audio to match detected tempo
+
+* Modules
+
+** Controller
+- Reads config
+- Instantiates modules
+- Dispatches incoming audio buffer to appropriate modules
+- Dispatches incoming MIDI to appropriate modules
+- Updates position
+- Receives processed audio from modules
+- Mixes audio
+- Outputs audio
+
+** Key tracker
+- Loads a key audio or MIDI track from disk
+- Takes live input audio or MIDI track(s)
+- Estimates the current position in the key track by matching the
+  keytrack and the live track(s)
+- Estimates the relative rate of the live track(s) relative to the
+  keytrack
+- Outputs the estimated keytrack position
+
+** Tempo detection (phase 2)
+- Takes input audio track(s)
+- Estimates tempo based on spacing of peaks
+- Outputs current tempo estimate
+
+** Sampler
+- Takes live input MIDI
+- Triggers audio samples associated with the MIDI events
+- Outputs audio associated with samples
+
+** Keytracked sampler
+- Like Sampler, but:
+- Loads samples that are aligned with a keytrack
+- Takes position in keytrack and relative live track rate
+- Stretches audio based on relative rate
+- Outputs stretched audio based on position
+- NOTE: care must be taken to maintain continuity between rate changes
+
+** Keytracked effects
+- Like Keytracked sampler, but:
+- Loads an effect schedule that is aligned with a keytrack
+- Takes in live audio track(s)
+- Takes position in keytrack
+- Plays out effect schedule based on keytrack position
+- Applies effects to live audio
+- Outputs affected audio
