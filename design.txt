@@ -42,6 +42,7 @@ perfen design doc
 - Outputs current tempo estimate
 
 ** Sampler
+- Configured with a map between MIDI events and audio samples
 - Takes live input MIDI
 - Triggers audio samples associated with the MIDI events
 - Outputs audio associated with samples
