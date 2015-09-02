@@ -11,7 +11,7 @@ typedef std::vector<sample_t> sample_vec;
 
 typedef jack_nframes_t nframes_t;
 
-typedef unsigned char midi_event;
+typedef jack_midi_event_t midi_event_t;
 
 typedef unsigned char midi_velocity;
 
