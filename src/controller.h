@@ -1,5 +1,7 @@
 // class to control audio and midi flow.
 
+#pragma once
+
 #include <string>
 
 #include "types.h"
