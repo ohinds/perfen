@@ -55,7 +55,7 @@ perfen design doc
 - Outputs stretched audio based on position
 - NOTE: care must be taken to maintain continuity between rate changes
 
-** Keytracked effects
+** Keytracked effects (phase 2)
 - Like Keytracked sampler, but:
 - Loads an effect schedule that is aligned with a keytrack
 - Takes in live audio track(s)
