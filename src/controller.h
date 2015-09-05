@@ -10,7 +10,7 @@ class Controller {
 
  public:
 
-  Controller(const std::string& configfile);
+  Controller(const std::string& config_file);
 
   ~Controller();
 
@@ -26,6 +26,6 @@ class Controller {
 
   int process(nframes_t nframes);
 
-  std::string configfile;
+  std::string config_file;
 
 };

@@ -9,6 +9,9 @@
 #include <jack/jack.h>
 #include <jack/midiport.h>
 
+#include <yaml-cpp/yaml.h>
+
+#include "sampler.h"
 #include "ui.h"
 
 using std::chrono::milliseconds;
@@ -22,12 +25,14 @@ jack_client_t *client;
 vector<jack_port_t*> input_audio_ports;
 vector<jack_port_t*> input_midi_ports;
 vector<jack_port_t*> output_audio_ports;
+
+Sampler sampler;
 Ui ui(false);
 
 } // anonymous namespace
 
 Controller::Controller(const string& config_file)
-  : configfile(config_file) {
+  : config_file(config_file) {
 }
 
 Controller::~Controller() {
@@ -101,6 +106,12 @@ bool Controller::run() {
 }
 
 bool Controller::parseConfig() {
+  YAML::Node node = YAML::LoadFile(config_file);
+  for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
+    if (it->first == "samples") {
+      sampler.parseConfig(it->second);
+    }
+  }
 
   // TODO read config and register ports, for now just register a
   // stereo input audio port, an input MIDI port, and a stereo output
@@ -141,6 +152,7 @@ int Controller::process(nframes_t nframes) {
     jack_port_get_buffer(input_audio_ports[1], nframes));
   sample_vec in_r(in, in + nframes);
 
+  float sum = 0.;
   for (sample_vec::iterator it = in_l.begin(); it != in_l.end(); ++it) {
     sum += *it;
   }

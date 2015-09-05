@@ -1,0 +1,16 @@
+samples:
+  cl_hihat:
+    file: samples/cl_hihat_st.wav
+    key: 2
+    midi: 42
+    pan: -1
+
+  kick:
+    file: samples/kick1_st.wav
+    key: 9
+    midi: 36
+
+  snare:
+    file: samples/snare_st.wav
+    key: f
+    midi: 38

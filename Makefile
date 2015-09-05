@@ -3,7 +3,9 @@ export OBJ_DIR = $(PWD)/obj
 
 export CC = g++
 export C_FLAGS = -std=c++11 -g
-export C_LIBS = `pkg-config --cflags --libs jack` -lncurses
+export C_LIBS = `pkg-config --cflags --libs jack` \
+                -lncurses \
+                -lyaml-cpp
 
 default: perfen
 

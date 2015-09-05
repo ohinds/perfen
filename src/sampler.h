@@ -15,9 +15,8 @@ class Sampler {
 
   ~Sampler();
 
-  // load a sample from a file, and register it to be played on a
-  // specified MIDI event
-  bool addSample(midi_data_t event, const std::string &sample_filename);
+  // parse a YAML config string
+  bool parseConfig(const std::string &config_string);
 
   // process a midi event at a particular velocity
   bool processEvent(midi_event_t event, midi_velocity velocity);
@@ -26,6 +25,12 @@ class Sampler {
   std::shared_ptr<sample_vec> getAudio(nframes_t nframes);
 
  private:
+
+  // load a sample from a file, and register it to be played on a
+  // specified MIDI event
+  bool addSample(midi_data_t event,
+                 const std::string &sample_filename,
+                 float pan);
 
   midi_sample_map sample_map;
 
