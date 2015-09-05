@@ -7,7 +7,7 @@
 # (see http://www.gnu.org/manual/make/html_chapter/make_10.html#SEC111)
 $(OBJ_DIR)/%.o: %.cpp %.h
 	@echo '[make: building $@]'
-	$(CC) $(C_FLAGS) -o $@ -c $<
+	g++ $(C_FLAGS) -o $@ -c $<
 
 HDR_FILES = $(wildcard *.h)
 SRC_FILES = $(wildcard ./*.cpp)
