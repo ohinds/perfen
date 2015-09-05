@@ -9,6 +9,7 @@ default: perfen
 
 perfen:
 	cd src && make
+	$(CC) $(C_FLAGS) -o $(BIN_DIR)/perfen $(OBJ_DIR)/*.o $(C_LIBS)
 
 clean:
 	rm $(OBJ_DIR)/* $(BIN_DIR)/*

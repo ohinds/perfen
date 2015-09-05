@@ -38,7 +38,7 @@ void Ui::print(const string &str) {
     refresh();
   }
   else {
-    cout << str << endl;
+    cout << str;
   }
 }
 

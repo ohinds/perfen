@@ -19,7 +19,7 @@ class KeytrackedSampler {
 
   // get the specified number of audio samples at the specified
   // position in the keytrack, at the current relative rate
-  shared_ptr<sample_vec> getAudio(nframes_t nframes, float position) const;
+  std::shared_ptr<sample_vec> getAudio(nframes_t nframes, float position) const;
 
  private:
 

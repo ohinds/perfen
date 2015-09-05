@@ -1,6 +1,8 @@
 #include "controller.h"
 
 #include <chrono>
+#include <cstring>
+#include <iostream>
 #include <thread>
 #include <vector>
 
@@ -25,7 +27,8 @@ Ui ui(false);
 } // anonymous namespace
 
 Controller::Controller(const string& config_file)
-  : configfile(config_file) {}
+  : configfile(config_file) {
+}
 
 Controller::~Controller() {
   jack_client_close(client);
@@ -65,8 +68,33 @@ bool Controller::init() {
 }
 
 bool Controller::run() {
+  if (jack_activate(client)) {
+    ui << "cannot activate client\n";
+    return false;
+  }
+
+  if (jack_connect(client, "system:capture_1", "perfen:input_L")) {
+    ui << "cannot connect input audio port 0\n";
+    return false;
+  }
+
+  if (jack_connect(client, "system:capture_2", "perfen:input_R")) {
+    ui << "cannot connect input audio port 1\n";
+    return false;
+  }
+
+  if (jack_connect(client, "perfen:output_L", "system:playback_1")) {
+    ui << "cannot connect output audio port 0\n";
+    return false;
+  }
+
+  if (jack_connect(client, "perfen:output_R", "system:playback_2")) {
+    ui << "cannot connect output audio port 1\n";
+    return false;
+  }
+
   while (true) {
-    sleep_for(milliseconds(1));
+    sleep_for(milliseconds(100));
   }
 
   return true;
@@ -113,6 +141,11 @@ int Controller::process(nframes_t nframes) {
     jack_port_get_buffer(input_audio_ports[1], nframes));
   sample_vec in_r(in, in + nframes);
 
+  for (sample_vec::iterator it = in_l.begin(); it != in_l.end(); ++it) {
+    sum += *it;
+  }
+  ui << "sum is " << sum << "\n";
+
   // process MIDI events
   // TODO incomplete?
   void* midi_in_buffer = jack_port_get_buffer(input_midi_ports[0], nframes);
@@ -121,11 +154,13 @@ int Controller::process(nframes_t nframes) {
     ui << "Processing " << event_count << " MIDI events\n";
     midi_event_t in_event;
     for(int i = 0; i < event_count; i++) {
-      jack_midi_event_get(&in_event, port_buf, i);
+      jack_midi_event_get(&in_event, midi_in_buffer, i);
       ui << "MIDI event " << i << " at time " << in_event.time
          << ". 1st byte is " << *(in_event.buffer) << "\n";
     }
   }
+
+  // TODO route the MIDI and audio
 
   // retreive the output buffers
   sample_t *out_l = static_cast<sample_t*>(
@@ -137,6 +172,27 @@ int Controller::process(nframes_t nframes) {
   // write to the output buffers
   memcpy(out_l, in_l.data(), sizeof(sample_t) * nframes);
   memcpy(out_r, in_r.data(), sizeof(sample_t) * nframes);
+
+  return 0;
+}
+
+int main(int argc, char** args) {
+  if (argc < 2) {
+    std::cerr << "usage: " << args[0] << " <config file>\n";
+    return 1;
+  }
+
+  Controller controller(args[1]);
+
+  if (!controller.init()) {
+    std::cerr << "Controller init failed\n";
+    return 2;
+  }
+
+  if (!controller.run()) {
+    std::cerr << "Controller run failed\n";
+    return 3;
+  }
 
   return 0;
 }

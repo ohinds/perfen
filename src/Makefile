@@ -14,6 +14,4 @@ SRC_FILES = $(wildcard ./*.cpp)
 TMP_FILES = $(patsubst ./%,$(OBJ_DIR)/%,$(SRC_FILES))
 OBJ_FILES = $(TMP_FILES:.cpp=.o)
 
-default: perfen
-perfen: $(OBJ_FILES)
-	$(CC) -o $(BIN_DIR)/perfen $(OBJ_FILES) $(C_LIBS)
+default: $(OBJ_FILES)
