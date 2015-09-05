@@ -1,0 +1,6 @@
+Dependencies:
+build-esstential
+libjack-dev
+libsndfile1-dev
+libboost-all-dev
+cmake
