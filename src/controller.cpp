@@ -108,9 +108,9 @@ bool Controller::run() {
 bool Controller::parseConfig() {
   YAML::Node node = YAML::LoadFile(config_file);
   for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
-    if (it->first == "samples") {
-      sampler.parseConfig(it->second);
-    }
+    // if (it->first == "samples") {
+    //   sampler.parseConfig(it->second);
+    // }
   }
 
   // TODO read config and register ports, for now just register a

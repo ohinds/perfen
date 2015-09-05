@@ -4,8 +4,11 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "types.h"
+
+class Sample;
 
 class Sampler {
 
@@ -28,9 +31,11 @@ class Sampler {
 
   // load a sample from a file, and register it to be played on a
   // specified MIDI event
-  bool addSample(midi_data_t event,
+  bool addSample(midi_data_t data,
                  const std::string &sample_filename,
                  float pan);
+
+  std::vector<Sample> samples;
 
   midi_sample_map sample_map;
 
