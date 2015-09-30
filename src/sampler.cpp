@@ -9,9 +9,11 @@ using std::shared_ptr;
 using std::string;
 
 namespace {
-  typedef std::pair<midi_data_t, Sample*> midi_sample_pair;
 
-  Ui ui(false);
+typedef std::pair<midi_data_t, Sample*> midi_sample_pair;
+
+Ui ui(false);
+
 }
 
 Sampler::Sampler()
@@ -38,11 +40,6 @@ bool Sampler::parseConfig(const string &config_string) {
     midi_data_t midi_data = (*it)["midi"].as<midi_data_t>();
 
     addSample(midi_data, file, pan);
-
-    // if ((*it)["key"]) {
-    //   key_sample_map[(*it)["key"].as<char>()] = sample;
-    // }
-
   }
   return true;
 }
