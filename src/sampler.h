@@ -10,6 +10,10 @@
 
 class Sample;
 
+typedef std::map<midi_data_t, Sample*> midi_sample_map;
+typedef std::pair<Sample*, nframes_t> playing_sample;
+typedef std::vector<playing_sample> playing_sample_vec;
+
 class Sampler {
 
  public:
@@ -25,7 +29,7 @@ class Sampler {
   bool processEvent(midi_event_t event, midi_velocity velocity);
 
   // retreive audio samples
-  std::shared_ptr<sample_vec> getAudio(nframes_t nframes);
+  std::shared_ptr<stereo_sample_vec> getAudio(nframes_t nframes);
 
  private:
 
@@ -40,5 +44,7 @@ class Sampler {
   midi_sample_map sample_map;
 
   sample_vec audio_buffer;
+
+  playing_sample_vec playing_samples;
 
 };
