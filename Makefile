@@ -1,7 +1,7 @@
 export BIN_DIR = $(PWD)/bin
 export OBJ_DIR = $(PWD)/obj
 
-export C_FLAGS = -std=c++0x \
+export C_FLAGS = -std=c++11 \
                  -g \
                  -I $(PWD)/ext/yaml-cpp/include
 export C_LIBS = `pkg-config --cflags --libs jack` \

@@ -33,6 +33,8 @@ class KeyTracker {
   // keytrack
   float getEstimatedRelativeRate() const;
 
+  void setPeakThreshold(float threshold);
+
  private:
 
   std::string keytrack_file;
@@ -42,4 +44,8 @@ class KeyTracker {
 
   float estimated_position;
   float estimated_rate;
+
+  // estimator parameters
+  float peak_threshold;
+
 };
