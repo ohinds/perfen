@@ -25,19 +25,24 @@ Sampler::~Sampler()
 bool Sampler::parseConfig(const string &config_string) {
   YAML::Node node = YAML::Load(config_string);
   for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
-    if (!(*it)["file"]) {
+    string sample_name = it->first.as<string>();
+    ui << sample_name << "\n";
+
+    YAML::Node sample_data = it->second;
+
+    if (!sample_data["file"]) {
       ui << "file is required for each sample\n";
       continue;
     }
 
-    string file((*it)["file"].as<string>());
+    string file(sample_data["file"].as<string>());
 
     float pan = 0.;
-    if ((*it)["pan"]) {
-      pan = (*it)["pan"].as<float>();
+    if (sample_data["pan"]) {
+      pan = sample_data["pan"].as<float>();
     }
 
-    midi_data_t midi_data = (*it)["midi"].as<midi_data_t>();
+    midi_data_t midi_data = sample_data["midi"].as<int>();
 
     addSample(midi_data, file, pan);
   }

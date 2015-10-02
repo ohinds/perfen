@@ -107,10 +107,9 @@ bool Controller::run() {
 
 bool Controller::parseConfig() {
   YAML::Node node = YAML::LoadFile(config_file);
-  for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
-    // if (it->first == "samples") {
-    //   sampler.parseConfig(it->second);
-    // }
+  if (node["samples"]) {
+    ui << YAML::Dump(node["samples"]) << "\n";
+    sampler.parseConfig(YAML::Dump(node["samples"]));
   }
 
   // TODO read config and register ports, for now just register a
@@ -152,11 +151,11 @@ int Controller::process(nframes_t nframes) {
     jack_port_get_buffer(input_audio_ports[1], nframes));
   sample_vec in_r(in, in + nframes);
 
-  float sum = 0.;
-  for (sample_vec::iterator it = in_l.begin(); it != in_l.end(); ++it) {
-    sum += *it;
-  }
-  ui << "sum is " << sum << "\n";
+  // float sum = 0.;
+  // for (sample_vec::iterator it = in_l.begin(); it != in_l.end(); ++it) {
+  //   sum += *it;
+  // }
+  // ui << "sum is " << sum << "\n";
 
   // process MIDI events
   // TODO incomplete?
