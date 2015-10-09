@@ -11,6 +11,8 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "keytracked_sequencer.h"
+#include "keytracker.h"
 #include "sampler.h"
 #include "ui.h"
 
@@ -26,6 +28,8 @@ vector<jack_port_t*> input_audio_ports;
 vector<jack_port_t*> input_midi_ports;
 vector<jack_port_t*> output_audio_ports;
 
+KeyTracker keytracker;
+KeytrackedSequencer keytracked_sequencer;
 Sampler sampler;
 Ui ui(false);
 

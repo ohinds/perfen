@@ -11,11 +11,11 @@ class KeyTracker {
 
  public:
 
-  KeyTracker(const std::string& keytrack_file);
+  KeyTracker();
 
   virtual ~KeyTracker();
 
-  bool init();
+  bool init(const std::string& keytrack_file);
 
   bool start();
 
@@ -36,8 +36,6 @@ class KeyTracker {
   void setPeakThreshold(float threshold);
 
  private:
-
-  std::string keytrack_file;
 
   sample_vec keytrack_audio;
   sample_vec unprocessed_audio;

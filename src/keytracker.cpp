@@ -43,16 +43,15 @@ float find_median_peak_distance(
 } // anonymous namespace
 
 
-KeyTracker::KeyTracker(const std::string& keytrack_file)
-  : keytrack_file(keytrack_file)
-  , estimated_position(0.)
-  , estimated_rate(0.)
+KeyTracker::KeyTracker()
+  : estimated_position(0.)
+  , estimated_rate(1.)
   , peak_threshold(0.5)
 {}
 
 KeyTracker::~KeyTracker() {}
 
-bool KeyTracker::init() {
+bool KeyTracker::init(const std::string& keytrack_file) {
   SF_INFO info;
   SNDFILE *snd_file = sf_open(keytrack_file.c_str(), SFM_READ, &info);
 
