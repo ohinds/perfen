@@ -32,7 +32,7 @@ float find_median_peak_distance(
     }
   }
 
-  vector<float> peak_diff;
+  vector<float> peak_diff(peaks.size());
   adjacent_difference(peaks.begin(), peaks.end(), peak_diff.begin());
 
   nth_element(peak_diff.begin(), peak_diff.begin() + peak_diff.size() / 2,
@@ -124,7 +124,8 @@ bool KeyTracker::update() {
 
   estimated_rate = live_median / key_median;
 
-  estimated_position += unprocessed_audio.size() / estimated_rate;
+  estimated_position +=
+    unprocessed_audio.size() / estimated_rate / keytrack_audio.size();
 
   unprocessed_audio.clear();
 

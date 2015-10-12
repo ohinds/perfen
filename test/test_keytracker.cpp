@@ -1,45 +1,17 @@
 #include "keytracker.h"
 
-#include <memory>
 #include <string>
 
 #include "gtest/gtest.h"
-
 #include "util.h"
+
 
 using std::shared_ptr;
 using std::string;
 
 namespace {
 
-class KeyTrackerTest : public ::testing::Test {
- protected:
-  // You can remove any or all of the following functions if its body
-  // is empty.
-
-  KeyTrackerTest() {
-    // You can do set-up work for each test here.
-  }
-
-  virtual ~KeyTrackerTest() {
-    // You can do clean-up work that doesn't throw exceptions here.
-  }
-
-  // If the constructor and destructor are not enough for setting up
-  // and cleaning up each test, you can define the following methods:
-
-  virtual void SetUp() {
-    // Code here will be called immediately after the constructor (right
-    // before each test).
-  }
-
-  virtual void TearDown() {
-    // Code here will be called immediately after each test (right
-    // before the destructor).
-  }
-
-  // Objects declared here can be used by all tests in the test case for Foo.
-};
+class KeyTrackerTest : public ::testing::Test {};
 
 // Test that the keytracker tracks an identity key properly
 TEST_F(KeyTrackerTest, IdentityTest) {
@@ -52,6 +24,22 @@ TEST_F(KeyTrackerTest, IdentityTest) {
   // load the live audio
   shared_ptr<sample_vec> live_audio = load_mono_audio(livetrack_file);
   ASSERT_FALSE(!live_audio);
+
+  const float CHUNK_TIME_S = 1.;
+  const nframes_t CHUNK_FRAMES = CHUNK_TIME_S * 44100;
+  for (nframes_t frame = CHUNK_FRAMES, sent_frames = 0;
+       frame < live_audio->size(); frame += CHUNK_FRAMES) {
+    sample_vec chunk(live_audio->begin() + frame - CHUNK_FRAMES,
+                     live_audio->begin() + frame - 1);
+    tracker.addLiveAudio(chunk);
+    tracker.update();
+    sent_frames += chunk.size();
+
+    EXPECT_EQ(1., tracker.getEstimatedRelativeRate());
+    EXPECT_FLOAT_EQ(static_cast<float>(sent_frames) / live_audio->size(),
+              tracker.getEstimatedPosition());
+  }
+
 
 }
 
