@@ -13,7 +13,7 @@ default: perfen
 
 perfen:
 	cd src && make
-	g++ $(C_FLAGS) -o $(BIN_DIR)/perfen $(OBJ_DIR)/*.o $(C_LIBS)
+	g++ $(C_FLAGS) -o $(BIN_DIR)/perfen $(OBJ_DIR)/*.o src/main.cpp $(C_LIBS)
 
 yaml-cpp:
 	mkdir -p ext
@@ -23,6 +23,9 @@ yaml-cpp:
 	cd yaml-cpp/build; \
 	cmake ..; \
 	make
+
+test: perfen
+	cd test && make
 
 clean:
 	rm $(OBJ_DIR)/* $(BIN_DIR)/*

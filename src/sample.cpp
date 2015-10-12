@@ -1,13 +1,15 @@
 #include "sample.h"
 
-#include <iostream>
+#include <memory>
 #include <string>
 
 #include <sndfile.h>
 
 #include "ui.h"
+#include "util.h"
 
 using std::copy;
+using std::shared_ptr;
 using std::string;
 
 namespace {
@@ -21,42 +23,26 @@ Sample::Sample(const string &filename, float pan)
 {}
 
 bool Sample::load() {
-  SF_INFO info;
-  SNDFILE *snd_file = sf_open(filename.c_str(), SFM_READ, &info);
-
-  if (!snd_file) {
-    ui << "Couldn't open " << filename << "\n";
-    return false;
-  }
-
-  if ((info.format & 0xFF) != SF_FORMAT_PCM_16) {
-    ui << "Unsupported audio format in " << filename << "\n";
-    return false;
-  }
-
-  sample_vec read_audio(info.frames * info.channels);
-  sf_count_t frames_read = sf_readf_float(snd_file, read_audio.data(),
-                                          info.frames);
-  sf_close(snd_file);
-
-  if (frames_read != info.frames) {
-    ui << "Error reading audio from " << filename << "\n";
-    return false;
-  }
-
-  audio.resize(info.frames);
+  size_t num_channels = get_num_channels(filename);
 
   // mono
-  if (info.channels == 1) {
+  if (num_channels == 1) {
     // TODO apply the pan
-    copy(read_audio.begin(), read_audio.end(), audio.left.begin());
-    copy(read_audio.begin(), read_audio.end(), audio.right.begin());
+    shared_ptr<sample_vec> read_audio = load_mono_audio(filename);
+    if (read_audio == NULL) {
+      return false;
+    }
+
+    copy(read_audio->begin(), read_audio->end(), audio.left.begin());
+    copy(read_audio->begin(), read_audio->end(), audio.right.begin());
   }
-  else { // stereo
-    copy(read_audio.begin(), read_audio.begin() + read_audio.size() / 2,
-         audio.left.begin());
-    copy(read_audio.begin() + read_audio. size() / 2, read_audio.end(),
-         audio.right.begin());
+  else if(num_channels == 2) { // stereo
+    shared_ptr<stereo_sample_vec> read_audio = load_stereo_audio(filename);
+    if (read_audio == NULL) {
+      return false;
+    }
+
+    audio = *read_audio;
   }
 }
 

@@ -10,7 +10,8 @@ $(OBJ_DIR)/%.o: %.cpp %.h
 	g++ $(C_FLAGS) -o $@ -c $<
 
 HDR_FILES = $(wildcard *.h)
-SRC_FILES = $(wildcard ./*.cpp)
+ALL_SRC_FILES = $(wildcard ./*.cpp)
+SRC_FILES = $(filter-out ./main.cpp, $(ALL_SRC_FILES))
 TMP_FILES = $(patsubst ./%,$(OBJ_DIR)/%,$(SRC_FILES))
 OBJ_FILES = $(TMP_FILES:.cpp=.o)
 
