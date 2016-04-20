@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-from aubio import onset, pitch
+from aubio import onset, pitch, source
+import math
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -8,7 +10,30 @@ import sys
 from scipy.io import wavfile
 import scipy.signal as signal
 
-DEBUG_PLOT = False
+DEBUG_PLOT = True
+matplotlib.interactive(False)
+
+class DebugPlot(object):
+
+    def __init__(self, num_ax=1):
+        self.fig = plt.figure()
+        self.ax = []
+        for ax in xrange(num_ax):
+            self.ax.append(self.fig.add_subplot(num_ax, 1, ax + 1))
+
+    def show(self):
+        plt.show()
+
+    def waveform(self, wav, x=None, ax=0):
+        if x is None:
+            x = xrange(len(wav))
+        self.ax[ax].plot(wav)
+
+    def onsets(self, onsets, ax=0):
+        y_min, y_max = self.ax[ax].get_ylim()
+
+        for on in onsets:
+            self.ax[ax].plot([on, on], [y_min, y_max], color='r')
 
 class Tracker(object):
 
@@ -17,8 +42,8 @@ class Tracker(object):
         rate1, audio1_int = wavfile.read(wav1)
         rate2, audio2_int = wavfile.read(wav2)
 
-        self.audio1 = np.array(audio1_int) / float(max(audio1_int))
-        self.audio2 = np.array(audio2_int) / float(max(audio2_int))
+        self.audio1 = np.array(audio1_int, 'float32') / max(audio1_int)
+        self.audio2 = np.array(audio2_int, 'float32') / max(audio2_int)
 
         if rate1 != rate2:
             raise ValueError("files must be of the same sample rate")
@@ -53,10 +78,13 @@ class Tracker(object):
                                       self.aubio_fft_win,
                                       self.aubio_hop_size,
                                       self.sample_rate)
+        self.onset_estimator1.set_threshold(0.1)
+
         self.onset_estimator2 = onset("default",
                                       self.aubio_fft_win,
                                       self.aubio_hop_size,
                                       self.sample_rate)
+        self.onset_estimator2.set_threshold(0.1)
 
 
     def estimate_shift(self, buf1, buf2):
@@ -65,8 +93,10 @@ class Tracker(object):
             onsets = []
 
             for ind in xrange(0, len(buf), self.aubio_hop_size):
-                estimator(buf[ind:ind+self.aubio_hop_size])
-                onsets.append(estimator.get_last())
+                if estimator(buf[ind:ind+self.aubio_hop_size]):
+                    onsets.append(estimator.get_last())
+
+            import ipdb; ipdb.set_trace()
 
             return onsets
 
@@ -76,21 +106,35 @@ class Tracker(object):
             for ind in xrange(0, len(buf), self.aubio_hop_size):
                 pitch = estimator(buf[ind:ind+self.aubio_hop_size])[0]
                 confidence = estimator.get_confidence()
-                pitches.append([pitch, confidence])
+
+                if not math.isnan(confidence) and confidence > 0.5:
+                    pitches.append([pitch, confidence])
 
             return pitches
-
 
         onsets1 = get_onsets(self.onset_estimator1, buf1)
         onsets2 = get_onsets(self.onset_estimator2, buf2)
 
+        if DEBUG_PLOT:
+            dp = DebugPlot(2)
+            dp.waveform(buf1, ax=0)
+
+            if len(onsets1) > 0:
+                dp.onsets(onsets1, ax=0)
+
+            dp.waveform(buf2, ax=1)
+
+            if len(onsets2) > 0:
+                dp.onsets(onsets2, ax=1)
+
+            dp.show()
+            import ipdb; ipdb.set_trace()
+
+
         pitches1 = get_pitches(self.pitch_estimator1, buf1)
         pitches2 = get_pitches(self.pitch_estimator2, buf2)
 
-
-        import ipdb; ipdb.set_trace()
-
-
+        shift = 0
         return shift
 
     def run(self):
@@ -103,10 +147,13 @@ class Tracker(object):
             buf1 = self.audio1[self.pos1:self.pos1 + self.window_size]
             buf2 = self.audio2[
                 self.pos2:self.pos2 + self.window_size / self.relative_rate]
-            buf2 = signal.resample(buf2, self.window_size)
+            buf2 = np.array(signal.resample(buf2, self.window_size), 'float32')
 
-            self.out_wav[self.pos1:self.pos1 + self.window_size, 0] = buf1
-            self.out_wav[self.pos1:self.pos1 + self.window_size, 1] = buf2
+            try:
+                self.out_wav[self.pos1:self.pos1 + self.window_size, 0] = buf1
+                self.out_wav[self.pos1:self.pos1 + self.window_size, 1] = buf2
+            except:
+                break
 
             if (np.sum(np.abs(buf1)) < self.power_ignore_threshold or
                 np.sum(np.abs(buf2)) < self.power_ignore_threshold):
@@ -117,14 +164,14 @@ class Tracker(object):
             ## MAGIC!
             shift = self.estimate_shift(buf1, buf2)
 
-            shifts.append(shift)
+            #shifts.append(shift)
 
             print shift
 
-            new_rate = shift / float(len(buf1))
+            new_rate = self.relative_rate - shift / float(len(buf1))
             self.relative_rate = ((1 - self.rate_damping) * self.relative_rate +
                                   self.rate_damping * new_rate)
-            print rate
+            print self.relative_rate
 
             self.pos1 += self.window_size
             self.pos2 = self.pos2 + self.window_size / self.relative_rate
@@ -134,7 +181,8 @@ class Tracker(object):
                 self.pos2 + self.window_size / self.relative_rate > len(self.audio2)):
                 break
 
-        wavfile.write('/tmp/tmp.wav', rate1, out_wav)
+        wavfile.write('/tmp/tmp.wav', self.sample_rate, self.out_wav)
+        print "wrote wav file"
 
 def main(argv):
     if len(argv) < 3:
