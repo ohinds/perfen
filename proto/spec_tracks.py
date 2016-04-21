@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from aubio import onset
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -158,21 +157,24 @@ def get_shift_box(buf1, buf2):
     return shift
 
 def main(argv):
-    if len(argv) < 3:
-        print "usage: %s track1 track2" % argv[0]
+    if len(argv) < 3 or len(argv) % 2 == 0:
+        print "usage: %s track1a [track1b ...] track2a [track2b ...]" % argv[0]
         return 1
 
-    rate1, audio1_int = wavfile.read(argv[1])
-    rate2, audio2_int = wavfile.read(argv[2])
+    num_tracks_per_song = (len(argv) - 1) / 2
 
-    audio1 = np.array(audio1_int) / float(max(audio1_int))
-    audio2 = np.array(audio2_int) / float(max(audio2_int))
+    song1_audio = []
+    for i in xrange(num_tracks_per_song):
+        sample_rate, audio_int = wavfile.read(argv[i + 1])
+        song1_audio.append(np.array(audio_int, 'float32') / max(audio_int))
 
-    if rate1 != rate2:
-        print "ERROR: files must be of the same sample rate"
-        return 2
+    song2_audio = []
+    for i in xrange(num_tracks_per_song):
+        sample_rate, audio_int = wavfile.read(argv[num_tracks_per_song + i + 1])
+        song2_audio.append(np.array(audio_int, 'float32') / max(audio_int))
 
-    window_size = 1.5 * rate1
+    num_samples = len(song1_audio[0])
+    window_size = int(1.5 * sample_rate)
     abs_power_thresh = 100
 
     # TODO handle offset starts
@@ -182,50 +184,55 @@ def main(argv):
     shift = 0
     shifts = []
     rate_damping = 0.5
-    rate = 1.0
+    relative_rate = 1.0
 
-    out_wav = np.zeros([len(audio1), 2])
+    out_wavs = []
+    for i in xrange(num_tracks_per_song):
+        out_wavs.append(np.zeros([num_samples, 2]))
 
     while True:
 
-        print "%d/%d : %d/%d" % (pos1, len(audio1), pos2, len(audio2))
+        print "%d/%d" % (pos1, len(song1_audio[0]))
 
-        buf1 = audio1[pos1:pos1 + window_size]
-        buf2 = audio2[pos2:pos2 + window_size / rate]
+        shift = []
+        for i in xrange(num_tracks_per_song):
+            buf1 = song1_audio[i][pos1:pos1 + window_size]
+            buf2 = song2_audio[i][pos2:pos2 + int(window_size / relative_rate)]
 
-        #buf2 = np.interp(np.arange(0, len(buf2), 1 / rate), np.arange(0, len(buf2)), buf2)
+            if relative_rate != 1.0:
+                buf2 = signal.resample(buf2, window_size)
 
-        try:
-            buf2 = signal.resample(buf2, window_size)
+            out_wavs[i][pos1:pos1 + window_size, 0] = buf1
+            out_wavs[i][pos1:pos1 + window_size, 1] = buf2
 
-            out_wav[pos1:pos1 + window_size, 0] = buf1
-            out_wav[pos1:pos1 + window_size, 1] = buf2
-        except:
-            break
+            if np.sum(np.abs(buf1)) < abs_power_thresh:
+                pos1 += window_size
+                pos2 = pos2 + window_size / relative_rate
+                continue
 
-        if np.sum(np.abs(buf1)) < abs_power_thresh:
-            pos1 += window_size
-            pos2 = pos2 + window_size / rate
-            continue
+            method = 'xcor'
+            if method == 'spec':
+                shift.append(get_shift_spec(buf1, sample_rate, buf2, sample_rate))
+            elif method == 'xcor':
+                shift.append(get_shift_xcor(buf1, buf2))
+            elif method == 'box':
+                shift.append(get_shift_box(buf1, buf2))
+            else:
+                print "error: unknown method %s" % method
 
-        method = 'xcor'
-        if method == 'spec':
-            shift = get_shift_spec(buf1, rate1, buf2, rate2)
-        elif method == 'xcor':
-            shift = get_shift_xcor(buf1, buf2)
-        elif method == 'box':
-            shift = get_shift_box(buf1, buf2)
+        # TODO estimate confidence
+        if len(shift) == 0:
+            this_shift = 0
         else:
-            print "error: unknown method %s" % method
+            this_shift = np.mean(shift)
 
-        shifts.append(shift)
-
-        print shift
+        shifts.append(this_shift)
+        print this_shift
 
         __min_shift_fit_len = 3
         __max_shift_fit_len = 3
         if len(shifts) < __min_shift_fit_len:
-            new_rate = rate - shift / float(len(buf1))
+            new_relative_rate = relative_rate - this_shift / float(len(buf1))
         else:
             n_points = min(__max_shift_fit_len, len(shifts))
             x = range(n_points)
@@ -233,18 +240,20 @@ def main(argv):
             b = shifts[-n_points:]
 
             slope, interc = np.linalg.lstsq(A, b)[0]
-            new_rate = rate - slope / len(buf1)
+            new_relative_rate = relative_rate - slope / len(buf1)
 
-        rate = (1 - rate_damping) * rate + rate_damping * new_rate
-        print rate
+        relative_rate = (1 - rate_damping) * relative_rate + rate_damping * new_relative_rate
+        print relative_rate
 
         pos1 += window_size
-        pos2 = pos2 + window_size / rate
+        pos2 = pos2 + window_size / relative_rate
 
-        if pos1 + window_size > len(audio1) or pos2 + window_size / rate > len(audio2):
+        if (pos1 + window_size > num_samples or
+            pos2 + window_size / relative_rate > len(song2_audio[0])):
             break
 
-    wavfile.write('/tmp/tmp.wav', rate1, out_wav)
+    for i in xrange(num_tracks_per_song):
+        wavfile.write('/tmp/tmp%d.wav' % i, sample_rate, out_wavs[i])
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
