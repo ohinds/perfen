@@ -49,8 +49,8 @@ class Tracker(object):
             raise ValueError("files must be of the same sample rate")
 
         self.sample_rate = rate1
-        self.window_size = self.sample_rate
-        self.aubio_fft_win = self.window_size / 10
+        self.window_size = 2 * 51200
+        self.aubio_fft_win = 512
         self.aubio_hop_size = self.aubio_fft_win / 2
 
         self.pos1 = 0
@@ -65,39 +65,43 @@ class Tracker(object):
 
         self.shifts = []
 
-        self.pitch_estimator1 = pitch("yinfft",
-                                      self.aubio_fft_win,
-                                      self.aubio_hop_size,
-                                      self.sample_rate)
-        self.pitch_estimator2 = pitch("yinfft",
+        self.pitch_estimator1 = pitch('yinfft',
                                       self.aubio_fft_win,
                                       self.aubio_hop_size,
                                       self.sample_rate)
 
-        self.onset_estimator1 = onset("default",
+        self.pitch_estimator2 = pitch('yinfft',
                                       self.aubio_fft_win,
                                       self.aubio_hop_size,
                                       self.sample_rate)
-        self.onset_estimator1.set_threshold(0.1)
 
-        self.onset_estimator2 = onset("default",
+        self.onset_estimator1 = onset('default',
                                       self.aubio_fft_win,
                                       self.aubio_hop_size,
                                       self.sample_rate)
-        self.onset_estimator2.set_threshold(0.1)
+        #self.onset_estimator1.set_threshold(0.8)
+        #self.onset_estimator1.set_silence(0.05)
+        #self.onset_estimator1.set_minioi(10000)
+
+        self.onset_estimator2 = onset('default',
+                                      self.aubio_fft_win,
+                                      self.aubio_hop_size,
+                                      self.sample_rate)
+        #self.onset_estimator2.set_threshold(0.8)
+        #self.onset_estimator2.set_silence(1)
+        #self.onset_estimator2.set_minioi(10000)
 
 
-    def estimate_shift(self, buf1, buf2):
+    def estimate_shift(self, buf1, offset1, buf2, offset2):
 
-        def get_onsets(estimator, buf):
+        def get_onsets(estimator, buf, offset):
             onsets = []
 
             for ind in xrange(0, len(buf), self.aubio_hop_size):
                 if estimator(buf[ind:ind+self.aubio_hop_size]):
-                    onsets.append(estimator.get_last())
+                    onsets.append(estimator.get_last() - offset)
 
-            import ipdb; ipdb.set_trace()
-
+            print onsets
             return onsets
 
         def get_pitches(estimator, buf):
@@ -112,8 +116,8 @@ class Tracker(object):
 
             return pitches
 
-        onsets1 = get_onsets(self.onset_estimator1, buf1)
-        onsets2 = get_onsets(self.onset_estimator2, buf2)
+        onsets1 = get_onsets(self.onset_estimator1, buf1, offset1)
+        onsets2 = get_onsets(self.onset_estimator2, buf2, offset2)
 
         if DEBUG_PLOT:
             dp = DebugPlot(2)
@@ -128,8 +132,6 @@ class Tracker(object):
                 dp.onsets(onsets2, ax=1)
 
             dp.show()
-            import ipdb; ipdb.set_trace()
-
 
         pitches1 = get_pitches(self.pitch_estimator1, buf1)
         pitches2 = get_pitches(self.pitch_estimator2, buf2)
@@ -146,7 +148,7 @@ class Tracker(object):
 
             buf1 = self.audio1[self.pos1:self.pos1 + self.window_size]
             buf2 = self.audio2[
-                self.pos2:self.pos2 + self.window_size / self.relative_rate]
+                self.pos2:self.pos2 + int(self.window_size / self.relative_rate)]
             buf2 = np.array(signal.resample(buf2, self.window_size), 'float32')
 
             try:
@@ -155,14 +157,14 @@ class Tracker(object):
             except:
                 break
 
-            if (np.sum(np.abs(buf1)) < self.power_ignore_threshold or
-                np.sum(np.abs(buf2)) < self.power_ignore_threshold):
-                self.pos1 += self.window_size
-                self.pos2 += self.window_size / self.relative_rate
-                continue
+            # if (np.sum(np.abs(buf1)) < self.power_ignore_threshold or
+            #     np.sum(np.abs(buf2)) < self.power_ignore_threshold):
+            #     self.pos1 += self.window_size
+            #     self.pos2 += self.window_size / self.relative_rate
+            #     continue
 
             ## MAGIC!
-            shift = self.estimate_shift(buf1, buf2)
+            shift = self.estimate_shift(buf1, self.pos1, buf2, self.pos2)
 
             #shifts.append(shift)
 

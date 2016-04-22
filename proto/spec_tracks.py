@@ -59,7 +59,6 @@ def smooth(x,window_len=2003,window='flat'):
 
 
     s=np.r_[x[window_len-1:0:-1],x,x[-1:-window_len:-1]]
-    #print(len(s))
     if window == 'flat': #moving average
         w=np.ones(window_len,'d')
     else:
@@ -68,24 +67,37 @@ def smooth(x,window_len=2003,window='flat'):
     y=np.convolve(w/w.sum(),s,mode='valid')
     return y
 
+def threshold(buf, thresh):
+    return [0 if x < thresh else x for x in buf]
+
 def get_envelope(buf):
     buf = np.abs(buf)
     buf = smooth(buf)
     return buf
 
 def get_shift_xcor(buf1, buf2):
-    buf1 = get_envelope(buf1 / np.max(buf1))
-    buf2 = get_envelope(buf2 / np.max(buf2))
-    xcorr = np.correlate(buf1, buf2, 'full')
-    shift = -(np.argmax(xcorr) - len(xcorr) / 2)
+    # buf1 = get_envelope(buf1 / np.max(buf1))
+    # buf2 = get_envelope(buf2 / np.max(buf2))
+    xcorr = np.correlate(buf1, buf2, 'same')
+
+    weights = range(len(xcorr) / 2) + range(len(xcorr) / 2, 0, -1)
+
+    weighted_xcor = xcorr * weights
+    weighted_xcor /= np.max(weighted_xcor)
+
+    shift = -(np.argmax(weighted_xcor) - len(xcorr) / 2)
 
     if (DEBUG_PLOT):
-        ax1 = plt.subplot(2, 1, 1)
-        ax2 = plt.subplot(2, 1, 2)
+        ax1 = plt.subplot(4, 1, 1)
+        ax2 = plt.subplot(4, 1, 2)
+        ax3 = plt.subplot(4, 1, 3)
+        ax4 = plt.subplot(4, 1, 4)
 
         ax1.plot(xcorr)
         ax2.plot(range(len(buf2)) - shift, buf2)
         ax2.plot(buf1)
+        ax3.plot(buf1)
+        ax4.plot(buf2)
 
         plt.show()
 
@@ -93,8 +105,8 @@ def get_shift_xcor(buf1, buf2):
 
 def get_shift_spec(buf1, rate1, buf2, rate2):
     def bandpass_spec(buf, rate):
-        __high_f = 5000
-        __low_f = 50
+        __high_f = 2000
+        __low_f = 1000
         f, t, Sxx = signal.spectrogram(buf, rate)
         min_f_i = next(x[0] for x in enumerate(f) if x[1] > __low_f)
         max_f_i = next(x[0] for x in enumerate(f) if x[1] > __high_f)
@@ -174,8 +186,9 @@ def main(argv):
         song2_audio.append(np.array(audio_int, 'float32') / max(audio_int))
 
     num_samples = len(song1_audio[0])
-    window_size = int(1.5 * sample_rate)
-    abs_power_thresh = 100
+    window_size = int(sample_rate)
+    abs_power_thresh = 0.1
+    buf_thresh = 0.1
 
     # TODO handle offset starts
 
@@ -190,9 +203,14 @@ def main(argv):
     for i in xrange(num_tracks_per_song):
         out_wavs.append(np.zeros([num_samples, 2]))
 
+    done_proportion = 0.9
+
     while True:
 
         print "%d/%d" % (pos1, len(song1_audio[0]))
+
+        if pos1 / float(len(song1_audio[0])) > done_proportion:
+            break
 
         shift = []
         for i in xrange(num_tracks_per_song):
@@ -205,7 +223,15 @@ def main(argv):
             out_wavs[i][pos1:pos1 + window_size, 0] = buf1
             out_wavs[i][pos1:pos1 + window_size, 1] = buf2
 
-            if np.sum(np.abs(buf1)) < abs_power_thresh:
+            # buf1 = threshold(buf1, 0.1)
+            # buf2 = threshold(buf2, 0.1)
+
+            # plt.subplot(2, 1, 1).plot(buf1)
+            # plt.subplot(2, 1, 2).plot(buf2)
+            # plt.show()
+
+            if (np.sum(np.abs(buf1)) < abs_power_thresh or
+                np.sum(np.abs(buf2)) < abs_power_thresh):
                 pos1 += window_size
                 pos2 = pos2 + window_size / relative_rate
                 continue
