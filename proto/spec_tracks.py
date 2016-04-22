@@ -186,8 +186,9 @@ def main(argv):
         song2_audio.append(np.array(audio_int, 'float32') / max(audio_int))
 
     num_samples = len(song1_audio[0])
-    window_size = int(sample_rate)
-    abs_power_thresh = 0.1
+    update_samples = int(0.5 * sample_rate)
+    window_size = int(1 * sample_rate)
+    abs_power_thresh = 1
     buf_thresh = 0.1
 
     # TODO handle offset starts
@@ -203,7 +204,7 @@ def main(argv):
     for i in xrange(num_tracks_per_song):
         out_wavs.append(np.zeros([num_samples, 2]))
 
-    done_proportion = 0.9
+    done_proportion = 1.0
 
     while True:
 
@@ -220,9 +221,6 @@ def main(argv):
             if relative_rate != 1.0:
                 buf2 = signal.resample(buf2, window_size)
 
-            out_wavs[i][pos1:pos1 + window_size, 0] = buf1
-            out_wavs[i][pos1:pos1 + window_size, 1] = buf2
-
             # buf1 = threshold(buf1, 0.1)
             # buf2 = threshold(buf2, 0.1)
 
@@ -233,7 +231,7 @@ def main(argv):
             if (np.sum(np.abs(buf1)) < abs_power_thresh or
                 np.sum(np.abs(buf2)) < abs_power_thresh):
                 pos1 += window_size
-                pos2 = pos2 + window_size / relative_rate
+                pos2 += int(window_size / relative_rate)
                 continue
 
             method = 'xcor'
@@ -250,7 +248,7 @@ def main(argv):
         if len(shift) == 0:
             this_shift = 0
         else:
-            this_shift = np.mean(shift)
+            this_shift = int(np.mean(shift))
 
         shifts.append(this_shift)
         print this_shift
@@ -271,12 +269,22 @@ def main(argv):
         relative_rate = (1 - rate_damping) * relative_rate + rate_damping * new_relative_rate
         print relative_rate
 
-        pos1 += window_size
-        pos2 = pos2 + window_size / relative_rate
+        pos1 += update_samples
+        pos2 += int(update_samples / relative_rate)
 
         if (pos1 + window_size > num_samples or
             pos2 + window_size / relative_rate > len(song2_audio[0])):
             break
+
+        # write the shifted output data
+        for i in xrange(num_tracks_per_song):
+            inds1 = xrange(pos1 + window_size - update_samples, pos1 + window_size)
+            out_wavs[i][inds1, 0] = song1_audio[i][inds1]
+
+            inds2 = xrange(pos2 + window_size - update_samples + this_shift,
+                           pos2 + window_size + this_shift)
+            out_wavs[i][inds1, 1] = song2_audio[i][inds2]
+
 
     for i in xrange(num_tracks_per_song):
         wavfile.write('/tmp/tmp%d.wav' % i, sample_rate, out_wavs[i])
