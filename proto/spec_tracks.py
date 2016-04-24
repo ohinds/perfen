@@ -188,8 +188,7 @@ def main(argv):
     num_samples = len(song1_audio[0])
     update_samples = int(0.5 * sample_rate)
     window_size = int(1 * sample_rate)
-    abs_power_thresh = 1
-    buf_thresh = 0.1
+    abs_power_thresh = 0
 
     # TODO handle offset starts
 
