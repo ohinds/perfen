@@ -52,6 +52,8 @@ def main(argv):
         backing = argv[-1]
         tracks = argv[1:-1]
 
+    rate_file = open('/tmp/rate.txt', 'w')
+
     num_tracks_per_song = len(tracks) / 2
 
     song1_audio = []
@@ -73,7 +75,7 @@ def main(argv):
         sample_rate, backing_audio = wavfile.read(backing)
 
     num_samples = len(song1_audio[0])
-    update_samples = int(0.5 * sample_rate)
+    update_samples = int(0.25 * sample_rate)
     window_size = int(1 * sample_rate)
 
     # TODO handle offset starts
@@ -91,13 +93,16 @@ def main(argv):
 
     back_aligned = np.zeros([num_samples, 2])
 
-    done_proportion = 0.1
+    done_proportion = 0.95
 
     while True:
 
-        print "%d/%d" % (pos1, len(song1_audio[0]))
+        proportion = pos1 / float(len(song1_audio[0]))
+        print "%0.4f%%" % 100 * proportion
 
-        if pos1 / float(len(song1_audio[0])) > done_proportion:
+        rate_file.write("%d %d %f\n" % (pos1, pos2, relative_rate))
+
+        if proportion > done_proportion:
             break
 
         track_shifts = []
@@ -187,6 +192,8 @@ def main(argv):
 
     if backing is not None:
         wavfile.write('/tmp/backing_aligned.wav', sample_rate, back_aligned)
+
+    rate_file.close()
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
